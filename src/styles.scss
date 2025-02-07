@@ -1,0 +1,39 @@
+html {
+  font-size: 14px;
+  font-family: 'Inter var', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol';
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  line-height: normal;
+}
+
+body {
+  background: var(--surface-ground);
+  color: var(--text-color);
+  padding: 1rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.card {
+  font-family: 'Poppins', sans-serif;
+}
+
+#header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#actions #update-stock,
+#add-client {
+  margin-left: 0.3rem;
+}

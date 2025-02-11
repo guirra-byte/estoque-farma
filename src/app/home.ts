@@ -2,19 +2,18 @@ import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
 import { ImportsModule } from "./imports";
 import { MenuItem } from "primeng/api";
 import { MedicationService } from "../service/medication/medication-service";
-import { formatDateUtil } from "../utils/format-date-util";
 import { Medication } from "src/types/medication-type";
+import { ClientService } from "@service/client/client-service";
+import { ClientRequest } from "src/types/client-type";
 
-export interface ClientRequest {
-  id: string;
-  name: string;
-  email: string;
-  requestDate: string;
-  medication: string;
-  phoneNumber: string;
-  priority: "low" | "medium" | "higher";
-}
-
+const hiddenMedicationValue = {
+  id: "",
+  name: "",
+  price: 0,
+  status: null,
+  waitingList: null,
+  quantityInStock: 0,
+};
 const hiddenClientValue = {
   id: "",
   name: "",
@@ -24,6 +23,7 @@ const hiddenClientValue = {
   phoneNumber: "",
   requestDate: null,
 };
+
 @Component({
   selector: "home",
   templateUrl: "home.html",
@@ -32,7 +32,23 @@ const hiddenClientValue = {
   providers: [],
 })
 export class Home implements OnInit {
+  menubarItems: MenuItem[] = [
+    {
+      label: "Meu Estoque",
+      icon: "pi pi-home",
+    },
+    {
+      label: "Notificações",
+      icon: "pi pi-whatsapp",
+    },
+    {
+      label: "Suporte",
+      icon: "pi pi-envelope",
+    },
+  ];
+
   constructor(
+    private clientService: ClientService,
     private medicationService: MedicationService,
     private cd: ChangeDetectorRef
   ) {}
@@ -44,14 +60,7 @@ export class Home implements OnInit {
   selectedMedication: Medication | null = null;
 
   // Dados do medicamento atual;
-  medication: Medication = {
-    id: "",
-    name: "",
-    price: 0,
-    status: null,
-    waitingList: null,
-    quantityInStock: 0,
-  };
+  medication: Medication = hiddenMedicationValue;
 
   // Controle de visibilidade do diálogo do medicamento;
   medicationDialogVisible: boolean = false;
@@ -97,128 +106,53 @@ export class Home implements OnInit {
   }
   /** ---------- Medication ----------- */
 
+  /** ---------- Client ----------- */
+  waitingList: ClientRequest[];
+
+  // Waiting List Dialog;
   openWaitingListDialog(medication: Medication) {
     this.selectedMedication = medication;
     this.handleClientLargeDialog();
   }
+  // Client Dialog States
+  client: ClientRequest = hiddenClientValue; // Propriedade para armazenar os dados do cliente
+  clientDialogVisible: boolean = false; // Estado do modal de client
+  clientLargeDialogVisible: boolean = false; // Estado do modal de client (grande)
 
-  waitingList: ClientRequest[];
-  menubarItems: MenuItem[];
-
-  // Client Dialog
-  client: ClientRequest = hiddenClientValue;
-  clientLargeDialogVisible: boolean = false;
+  // Método para alternar o estado do "clientLargeDialog"
   handleClientLargeDialog() {
     this.clientLargeDialogVisible = !this.clientLargeDialogVisible;
   }
 
-  clientDialogVisible: boolean = false;
+  // Método para alternar o estado do "clientDialog"
   handleClientDialog() {
     this.clientDialogVisible = !this.clientDialogVisible;
   }
 
-  clearClientInfos() {
-    this.handleClientDialog();
-    this.client = hiddenClientValue;
-    this.cd.detectChanges();
+  // Método para limpar os dados do cliente
+  clearClient() {
+    this.handleClientDialog(); // Fecha o dialog
+    this.client = this.clientService.clearClient(); // Limpa os dados do cliente
+    this.cd.detectChanges(); // Força a detecção de mudanças
   }
 
+  // Método para salvar as informações do cliente
   saveClientInfos() {
-    const phoneNumberRegExp =
-      /^\+?\d{0,3}?\s?(\(?\d{2,4}\)?)?\s?\d{4,5}[-.\s]?\d{4}$/;
-    const emailRegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-    const requestInfosCondition =
-      this.client.medication && this.client.priority;
-
-    const personalInfosCondition =
-      this.client.email && this.client.email && this.client.phoneNumber;
-
-    const validateWithRegExpConditions =
-      phoneNumberRegExp.test(this.client.phoneNumber) &&
-      emailRegExp.test(this.client.email);
-
-    if (
-      personalInfosCondition &&
-      requestInfosCondition &&
-      validateWithRegExpConditions
-    ) {
-      this.client.requestDate = formatDateUtil(new Date());
-      let tmp = localStorage.getItem("clients");
-
-      if (tmp) {
-        let prevClients = JSON.parse(tmp) as ClientRequest[];
-        const clientAlreadyNoted = prevClients.find(
-          (client) =>
-            client.email === this.client.email ||
-            client.phoneNumber === this.client.phoneNumber
-        );
-
-        if (!clientAlreadyNoted) {
-          prevClients = [...prevClients, this.client];
-          localStorage.setItem("clients", JSON.stringify(prevClients));
-        }
-      } else {
-        localStorage.setItem("clients", JSON.stringify([this.client]));
-      }
-
-      const tmpMedications = localStorage.getItem("medications");
-      let prevMedications = tmpMedications
-        ? (JSON.parse(tmpMedications) as Medication[])
-        : [];
-
-      const prevMedicationWaitingListInIndexLocalStorage =
-        prevMedications.findIndex(
-          (medication) => this.client.medication === medication.name
-        );
-
-      if (prevMedicationWaitingListInIndexLocalStorage !== -1) {
-        // Valor de Referência
-        const selectedMedication =
-          prevMedications[prevMedicationWaitingListInIndexLocalStorage];
-
-        if (selectedMedication.waitingList) {
-          prevMedications[
-            prevMedicationWaitingListInIndexLocalStorage
-          ].waitingList.push(this.client);
-        } else {
-          prevMedications[
-            prevMedicationWaitingListInIndexLocalStorage
-          ].waitingList = [this.client];
-        }
-
-        localStorage.setItem("medications", JSON.stringify(prevMedications));
-        this.medications = prevMedications;
-        this.clearClientInfos();
-      }
-    }
+    this.clientService.saveClient(this.client); // Salva os dados do cliente através do service
   }
+  /** ---------- Client ----------- */
 
   async ngOnInit(): Promise<void> {
-    this.menubarItems = [
-      {
-        label: "Meu Estoque",
-        icon: "pi pi-home",
-      },
-      {
-        label: "Notificações",
-        icon: "pi pi-whatsapp",
-      },
-      {
-        label: "Suporte",
-        icon: "pi pi-envelope",
-      },
-    ];
-
     this.medicationService.medications$.subscribe((medications) => {
       this.medications = medications;
+      this.medications.map((medication) =>
+        this.medicationsSelect.push(medication.name)
+      );
     });
 
-    const tmpClients = localStorage.getItem("clients");
-    if (tmpClients) this.waitingList = JSON.parse(tmpClients);
-    this.medications.map((medication) =>
-      this.medicationsSelect.push(medication.name)
-    );
+    this.clientService.clients$.subscribe((medications) => {
+      this.medications = medications;
+    });
 
     this.cd.detectChanges();
   }
@@ -228,7 +162,7 @@ export class Home implements OnInit {
     {
       label: "Reposição em Breve",
       color: "#fbbf24",
-      value: 8,
+      value: 30,
       icon: "pi pi-inbox",
     },
     {

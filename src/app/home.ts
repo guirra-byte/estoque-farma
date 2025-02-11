@@ -1,17 +1,11 @@
 import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
 import { ImportsModule } from "./imports";
 import { MenuItem } from "primeng/api";
+import { MedicationService } from "../service/medication/medication-service";
+import { formatDateUtil } from "../utils/format-date-util";
+import { Medication } from "src/types/medication-type";
 
-export interface Medication {
-  id: string;
-  name: string;
-  price: number;
-  quantityInStock: number;
-  status: "out_of_stock" | "restocking_soon" | "available_now";
-  waitingList: ClientRequest[];
-}
-
-interface ClientRequest {
+export interface ClientRequest {
   id: string;
   name: string;
   email: string;
@@ -21,19 +15,15 @@ interface ClientRequest {
   priority: "low" | "medium" | "higher";
 }
 
-const formatDate = (date: Date) => {
-  const options: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  };
-
-  return new Intl.DateTimeFormat("en-GB", options).format(date);
+const hiddenClientValue = {
+  id: "",
+  name: "",
+  email: "",
+  priority: null,
+  medication: "",
+  phoneNumber: "",
+  requestDate: null,
 };
-
 @Component({
   selector: "home",
   templateUrl: "home.html",
@@ -42,21 +32,18 @@ const formatDate = (date: Date) => {
   providers: [],
 })
 export class Home implements OnInit {
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(
+    private medicationService: MedicationService,
+    private cd: ChangeDetectorRef
+  ) {}
 
-  selectedMedication: Medication | null = null;
-  openWaitingListDialog(medication: Medication) {
-    this.selectedMedication = medication;
-    this.handleClientLargeDialog();
-  }
-
-  medications: Medication[];
+  /** ---------- Medication ----------- */
+  // Lista de medicamentos e suas seleções;
+  medications: Medication[] = [];
   medicationsSelect: string[] = [];
-  waitingList: ClientRequest[];
+  selectedMedication: Medication | null = null;
 
-  menubarItems: MenuItem[];
-
-  // Medication Dialog;
+  // Dados do medicamento atual;
   medication: Medication = {
     id: "",
     name: "",
@@ -66,71 +53,60 @@ export class Home implements OnInit {
     quantityInStock: 0,
   };
 
+  // Controle de visibilidade do diálogo do medicamento;
   medicationDialogVisible: boolean = false;
+
+  // Abrir ou fechar o diálogo de medicamentos;
   handleMedicationDialog() {
     this.medicationDialogVisible = !this.medicationDialogVisible;
   }
 
-  clearMedicationInfos() {
-    this.medicationDialogVisible = false;
-    this.medication = {
-      id: "",
-      name: "",
-      price: 0,
-      status: null,
-      waitingList: null,
-      quantityInStock: 0,
-    };
-
+  // Limpar informações do medicamento e fechar o diálogo
+  clearMedication() {
+    this.handleMedicationDialog();
+    this.medication = this.medicationService.clearMedication();
     this.cd.detectChanges();
   }
 
+  // Salvar as informações do medicamento;
   saveMedicationInfos() {
-    const inStockConditional =
-      this.medication.status === "available_now" &&
-      this.medication.quantityInStock > 0;
-
-    const outOfStockConditional =
-      (this.medication.status === "out_of_stock" ||
-        this.medication.status === "restocking_soon") &&
-      this.medication.quantityInStock === 0;
-
-    if (this.medication.name !== "" && this.medication.price > 0) {
-      if (inStockConditional || outOfStockConditional) {
-        let tmp = localStorage.getItem("medications");
-        if (tmp) {
-          let prevMedications = JSON.parse(tmp);
-          //Clients Waiting List will be working with FIFO or Queue (First In First Out);
-          prevMedications = [this.medication, ...prevMedications];
-          this.medications = prevMedications;
-          localStorage.setItem("medications", JSON.stringify(prevMedications));
-        } else {
-          localStorage.setItem(
-            "medications",
-            JSON.stringify([this.medication])
-          );
-
-          this.medications = [this.medication];
-        }
-
-        this.medicationsSelect.push(this.medication.name);
-        this.cd.detectChanges();
-        this.clearMedicationInfos();
-      }
-    }
+    this.medicationService.saveMedication(this.medication);
+    this.clearMedication();
   }
 
-  // Client Dialog
-  client: ClientRequest = {
-    id: "",
-    name: "",
-    email: "",
-    priority: null,
-    medication: "",
-    phoneNumber: "",
-    requestDate: null,
-  };
+  // Classificar a severidade baseada na quantidade em estoque;
+  stockSeverity(medication: Medication) {
+    if (medication.quantityInStock === 0) return "danger";
+    else if (medication.quantityInStock > 0 && medication.quantityInStock < 10)
+      return "warn";
+    else return "success";
+  }
 
+  // Classificar a disponibilidade do medicamento;
+  availabilityClassification(medication: Medication) {
+    if (medication.status === "out_of_stock") return "danger";
+    else if (medication.status === "restocking_soon") return "warn";
+    else return "success";
+  }
+
+  // Exibir o status de disponibilidade do medicamento;
+  severityLabel(medication: Medication) {
+    if (medication.status === "available_now") return "Em Estoque";
+    else if (medication.status === "out_of_stock") return "Fora de Estoque";
+    else return "Reposição em Breve";
+  }
+  /** ---------- Medication ----------- */
+
+  openWaitingListDialog(medication: Medication) {
+    this.selectedMedication = medication;
+    this.handleClientLargeDialog();
+  }
+
+  waitingList: ClientRequest[];
+  menubarItems: MenuItem[];
+
+  // Client Dialog
+  client: ClientRequest = hiddenClientValue;
   clientLargeDialogVisible: boolean = false;
   handleClientLargeDialog() {
     this.clientLargeDialogVisible = !this.clientLargeDialogVisible;
@@ -143,16 +119,7 @@ export class Home implements OnInit {
 
   clearClientInfos() {
     this.handleClientDialog();
-    this.client = {
-      id: "",
-      name: "",
-      email: "",
-      priority: null,
-      medication: "",
-      phoneNumber: "",
-      requestDate: null,
-    };
-
+    this.client = hiddenClientValue;
     this.cd.detectChanges();
   }
 
@@ -176,7 +143,7 @@ export class Home implements OnInit {
       requestInfosCondition &&
       validateWithRegExpConditions
     ) {
-      this.client.requestDate = formatDate(new Date());
+      this.client.requestDate = formatDateUtil(new Date());
       let tmp = localStorage.getItem("clients");
 
       if (tmp) {
@@ -243,44 +210,17 @@ export class Home implements OnInit {
       },
     ];
 
-    const tmpMedications = localStorage.getItem("medications");
-    const tmpClients = localStorage.getItem("clients");
+    this.medicationService.medications$.subscribe((medications) => {
+      this.medications = medications;
+    });
 
-    if (tmpMedications) this.medications = JSON.parse(tmpMedications);
+    const tmpClients = localStorage.getItem("clients");
     if (tmpClients) this.waitingList = JSON.parse(tmpClients);
     this.medications.map((medication) =>
       this.medicationsSelect.push(medication.name)
     );
 
     this.cd.detectChanges();
-  }
-
-  // Medication Utils
-  stockSeverity(medication: Medication) {
-    if (medication.quantityInStock === 0) return "danger";
-    else if (medication.quantityInStock > 0 && medication.quantityInStock < 10)
-      return "warn";
-    else return "success";
-  }
-
-  availabilityClassification(medication: Medication) {
-    if (medication.status === "out_of_stock") return "danger";
-    else if (medication.status === "restocking_soon") return "warn";
-    else return "success";
-  }
-
-  severityLabel(medication: Medication) {
-    if (medication.status === "available_now") return "Em Estoque";
-    else if (medication.status === "out_of_stock") return "Fora de Estoque";
-    else return "Reposição em Breve";
-  }
-
-  filterByMedication(medication: Medication) {
-    const data = this.waitingList.filter(
-      (client) => client.medication === medication.name
-    );
-
-    return data;
   }
 
   overviewMeterGroup = [

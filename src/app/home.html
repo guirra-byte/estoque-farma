@@ -1,0 +1,259 @@
+<div class="card">
+  <p-menubar [model]="menubarItems">
+  </p-menubar>
+
+  <p-divider align="center" type="dashed">
+    <b>Gerencie listas de espera para seus medicamentos e notifique seus clientes automaticamente</b>
+  </p-divider>
+
+  <div id="header">
+    <div class="first">
+      <div id="title">
+        <h1>EstoqueFarma</h1>
+      </div>
+
+      <div id="actions">
+        <p-button id="add-medication" label="Adicionar Medicamento" icon="pi pi-heart" iconPos="right"
+          severity="contrast" (onClick)="handleMedicationDialog()" />
+
+        <p-dialog header="Adicionando Medicamento" [modal]="true" [(visible)]="medicationDialogVisible"
+          [style]="{ width: '27rem' }">
+          <span [ngStyle]="{ color: '#6b7280', display: 'block', marginBottom: '1.3rem' }">
+            Informações do Medicamento
+          </span>
+
+          <div [ngStyle]="{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.3rem' }">
+            <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+              <input id="username" pInputText [ngStyle]="{'width': '100%'}" [(ngModel)]="medication.name" />
+              <label for="username">Nome</label>
+            </p-floatlabel>
+          </div>
+
+
+          <div [ngStyle]="{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.8rem' }">
+            <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+              <p-inputnumber [(ngModel)]="medication.price" [showButtons]="true" buttonLayout="horizontal"
+                [ngStyle]="{'width': '100%'}" inputId="horizontal" spinnerMode="horizontal" [step]="0.25"
+                mode="currency" currency="BRL">
+                <ng-template #incrementbuttonicon>
+                  <span class="pi pi-plus"></span>
+                </ng-template>
+                <ng-template #decrementbuttonicon>
+                  <span class="pi pi-minus"></span>
+                </ng-template>
+              </p-inputnumber>
+              <label for="username">Preço</label>
+            </p-floatlabel>
+          </div>
+
+
+          <div [ngStyle]="{'display': 'flex', 'flex-direction': 'column', 'gap': '1rem', marginBottom: '.8rem'}">
+            <span [ngStyle]="{ color: '#6b7280', display: 'block', marginTop: '1.3rem' }">
+              Disponibilidade do Medicamento
+            </span>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="medication.status" [(ngModel)]="medication.status" value="available_now"
+                inputId="available_now" />
+              <label for="available_now" [ngStyle]="{'marginLeft': '0.5rem'}">Em Estoque</label>
+            </div>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="medication.status" [(ngModel)]="medication.status" value="restocking_soon"
+                inputId="restocking_soon" />
+              <label for="restocking_soon" [ngStyle]="{'marginLeft': '0.5rem'}">Reposição em Breve</label>
+            </div>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="medication.status" [(ngModel)]="medication.status" value="out_of_stock"
+                inputId="out_of_stock" />
+              <label for="out_of_stock" [ngStyle]="{'marginLeft': '0.5rem'}">Fora de Estoque</label>
+            </div>
+          </div>
+
+          <div [ngStyle]="{'display': 'flex', 'flex-direction': 'column', 'gap': '1rem', marginBottom: '1.3rem'}">
+            <span [ngStyle]="{ color: '#6b7280', display: 'block', marginTop: '1.3rem' }">
+              Quantidade em Estoque
+            </span>
+
+            <p-inputnumber mode="decimal" [(ngModel)]="medication.quantityInStock" [showButtons]="true"
+              inputId="minmax-buttons" [min]="0" [max]="100" />
+          </div>
+
+          <div [ngStyle]="{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }">
+            <p-button label="Cancel" severity="secondary" (onClick)="handleMedicationDialog()" />
+            <p-button label="Save" (onClick)="saveMedicationInfos()" />
+          </div>
+        </p-dialog>
+
+        <p-button id="add-client" label="Adicionar Cliente na Fila de Espera" icon="pi pi-user-plus"
+          severity="secondary" (onClick)="handleClientDialog()" iconPos="right" />
+
+        <p-dialog header="Fila de Espera" [modal]="true" [(visible)]="clientDialogVisible" [style]="{ width: '27rem' }">
+          <span [ngStyle]="{ color: '#6b7280', display: 'block', marginBottom: '1.3rem' }">
+            Informações do Cliente
+          </span>
+
+          <div [ngStyle]="{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.3rem' }">
+            <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+              <input id="username" pInputText [ngStyle]="{'width': '100%'}" [(ngModel)]="client.name" />
+              <label for="username">Nome</label>
+            </p-floatlabel>
+          </div>
+
+          <div [ngStyle]="{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.3rem' }">
+            <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+              <input id="email" pInputText [ngStyle]="{'width': '100%'}" [(ngModel)]="client.email" />
+              <label for="email">Email</label>
+            </p-floatlabel>
+          </div>
+
+          <div [ngStyle]="{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.3rem' }">
+            <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+              <input id="phoneNumber" type="tel" pInputText [ngStyle]="{'width': '100%'}"
+                [(ngModel)]="client.phoneNumber" />
+              <label for="phoneNumber">Telefone</label>
+            </p-floatlabel>
+          </div>
+
+          <p-floatlabel variant="on" [ngStyle]="{'width': '100%'}">
+            <p-select [options]="medicationsSelect" id="clientMedication" [(ngModel)]="client.medication"
+              [ngStyle]="{'width': '100%'}" placeholder="Selecione o Medicamento" [editable]="true"
+              class="w-full md:w-56" />
+            <label for="clientMedication">Selecione o Medicamento</label>
+          </p-floatlabel>
+
+
+          <div [ngStyle]="{'display': 'flex', 'flex-direction': 'column', 'gap': '1rem', marginBottom: '.8rem'}">
+            <span [ngStyle]="{ color: '#6b7280', display: 'block', marginTop: '1.3rem' }">
+              Nível de Prioridade
+            </span>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="client.priority" [(ngModel)]="client.priority" value="low" inputId="low" />
+              <label for="low" [ngStyle]="{'marginLeft': '0.5rem'}">Baixa</label>
+            </div>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="client.priority" [(ngModel)]="client.priority" value="medium" inputId="medium" />
+              <label for="medium" [ngStyle]="{'marginLeft': '0.5rem'}">Média</label>
+            </div>
+
+            <div [ngStyle]="{'display': 'flex', 'alignItems': 'center'}">
+              <p-radiobutton name="client.priority" [(ngModel)]="client.priority" value="high" inputId="high" />
+              <label for="high" [ngStyle]="{'marginLeft': '0.5rem'}">Alta</label>
+            </div>
+          </div>
+
+          <div [ngStyle]="{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }">
+            <p-button label="Cancel" severity="secondary" (onClick)="handleClientDialog()" />
+            <p-button label="Save" (onClick)="saveClientInfos()" />
+          </div>
+        </p-dialog>
+      </div>
+    </div>
+
+    <div class="second">
+      <p-metergroup [value]="overviewMeterGroup" />
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-div">
+      <p-table showGridlines id="table" [value]="medications" [ngStyle]="{ 'min-width': '50rem' }">
+        <ng-template #header>
+          <tr>
+            <th>Nome</th>
+            <th>Preço</th>
+            <th>Quantidade</th>
+            <th>Disponibilidade</th>
+            <th>Ações</th>
+            <th>Lista de Espera</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-medication>
+          <tr>
+            <td>{{ medication.name }}</td>
+            <td>R${{ medication.price }}</td>
+            <td>
+              <p-badge [value]="medication.quantityInStock" [severity]="stockSeverity(medication)" />
+            </td>
+            <td>
+              <p-badge [value]="severityLabel(medication)" [severity]="availabilityClassification(medication)" />
+            </td>
+            <td>
+              <button type="button" [ngStyle]="{'width': '100%'}" (click)="openWaitingListDialog(medication)" pButton
+                severity="secondary" icon="pi pi-pencil" label="Atualizar Estoque" iconPos="right" [outlined]="true">
+              </button>
+            </td>
+            <td>
+              <p-button type="button" [disabled]="!medication.waitingList" styleClass="m-0 full-width" (click)="openWaitingListDialog(medication)"
+                severity="secondary" icon="pi pi-external-link" label="Expandir" badge="2" badgeSeverity="contrast" iconPos="left" [outlined]="true">
+              </p-button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <!-- Diálogo de Fila de Espera -->
+  <p-dialog header="{{ selectedMedication?.name }}" [resizable]="false" [modal]="true" [maximizable]="true"
+    appendTo="body" [(visible)]="clientLargeDialogVisible" [style]="{ width: '75vw' }"
+    [contentStyle]="{ height: '300px' }">
+
+    <p-divider class="waitingListDivider" align="left" type="dotted">
+      <p-tag icon="pi pi-info-circle" severity="info" value="Fila de Espera - {{ selectedMedication?.waitingList.length }} cliente(s)" />
+    </p-divider>
+
+    <p-table showGridlines [value]="selectedMedication?.waitingList" [scrollable]="true" scrollHeight="flex"
+      [tableStyle]="{ 'min-width': '50rem' }">
+      <ng-template #header>
+        <tr>
+          <th style="width: 4rem"><p-tableHeaderCheckbox /></th>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Telefone</th>
+          <th>Data do Pedido</th>
+          <th>Situação da Retirada</th>
+          <th>Notificar</th>
+          <th>Situação da Mensagem</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-client>
+        <tr>
+          <td>
+            <p-tableCheckbox [value]="client" />
+        </td>
+          <td>{{ client.name }}</td>
+          <td>{{ client.email }}</td>
+          <td>{{ client.phoneNumber }}</td>
+          <td>
+            <p-tag icon="pi pi-info-circle" severity="info" [value]="client.requestDate" />
+          </td>
+
+          <!-- De acordo com a posição do cliente na Fila de Espera o badge deve informar
+           se a posição do cliente na fila o confere livre retirada do medicamento,
+           se deve aguardar uma nova reposição ou
+           se o prazo para retirada está expirando; -->
+          <td>
+            <p-tag icon="pi pi-info-circle" severity="success" [value]="client.requestDate" />
+          </td>
+
+          <td>
+            <p-button icon="pi pi-whatsapp" iconPos="right" severity="success" label="Mandar um Zap"></p-button>
+          </td>
+
+          <td>
+            <p-tag icon="pi pi-info-circle" severity="secondary" value="Não Enviada" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <ng-template #footer>
+      <p-button label="Ok" iconPos="right" icon="pi pi-check" (onClick)="clientLargeDialogVisible = false"></p-button>
+    </ng-template>
+  </p-dialog>
+</div>

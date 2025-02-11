@@ -102,7 +102,6 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { DrawerModule } from 'primeng/drawer';
-import { MedicineService } from '@service/productservice';
 
 @NgModule({
   imports: [
@@ -315,6 +314,6 @@ import { MedicineService } from '@service/productservice';
     AutoFocusModule,
     OverlayBadgeModule,
   ],
-  providers: [MedicineService],
+  providers: [],
 })
 export class ImportsModule {}

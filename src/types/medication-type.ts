@@ -1,4 +1,4 @@
-import { ClientRequest } from "src/app/home";
+import { ClientRequest } from "./client-type";
 
 export interface Medication {
   id: string;

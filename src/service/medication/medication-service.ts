@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Injectable } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { BehaviorSubject } from "rxjs";
 import { Medication } from "src/types/medication-type";
 
@@ -43,8 +43,6 @@ export class MedicationService {
         prevMedications = [medication, ...prevMedications];
         localStorage.setItem("medications", JSON.stringify(prevMedications));
         this.medicationSubject.next(prevMedications);
-        // this.medications = prevMedications;
-        // this.clearMedicationData();
       }
     }
   }

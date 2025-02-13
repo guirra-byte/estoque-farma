@@ -8,6 +8,8 @@ html {
 }
 
 body {
+  font-family: 'Poppins', sans-serif;
+  font-size: small;
   background: var(--surface-ground);
   color: var(--text-color);
   padding: 1rem;
@@ -21,8 +23,8 @@ body {
 			80%,
 			hsla(0, 0%, 7%, 0.6)
 		),
-		linear-gradient(transparent calc(50% - 1px), #ffffff23 1px, transparent calc(50% + 1px) 100%),
-		linear-gradient(to right, transparent calc(50% - 1px), #ffffff23 1px, transparent calc(50% + 1px) 100%);
+		linear-gradient(transparent calc(50% - 1px), #ffffff31 1px, transparent calc(50% + 1px) 100%),
+		linear-gradient(to right, transparent calc(50% - 1px), #ffffff31 1px, transparent calc(50% + 1px) 100%);
 	background-size: 100% 100%, 40px 40px, 40px 40px;
 }
 

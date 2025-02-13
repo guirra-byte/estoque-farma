@@ -1,9 +1,14 @@
+import { PriorityLevel } from "@service/client/client-service";
+
 export interface ClientRequest {
   id: string;
   name: string;
   email: string;
-  requestDate: string;
-  medication: string;
+  requestDate: Date;
   phoneNumber: string;
-  priority: "low" | "medium" | "higher";
+  medication: string;
+  usage: "continuous" | "occasional";
+  clinicalEmergency: boolean;
+  priority: PriorityLevel;
+  score: number
 }

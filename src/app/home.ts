@@ -5,6 +5,7 @@ import { MedicationService } from "../service/medication/medication-service";
 import { Medication } from "src/types/medication-type";
 import { ClientService } from "@service/client/client-service";
 import { ClientRequest } from "src/types/client-type";
+import { formatDateUtil } from "src/utils/format-date-util";
 
 const hiddenMedicationValue = {
   id: "",
@@ -14,7 +15,8 @@ const hiddenMedicationValue = {
   waitingList: null,
   quantityInStock: 0,
 };
-const hiddenClientValue = {
+
+const hiddenClientValue: ClientRequest = {
   id: "",
   name: "",
   email: "",
@@ -22,6 +24,9 @@ const hiddenClientValue = {
   medication: "",
   phoneNumber: "",
   requestDate: null,
+  clinicalEmergency: false,
+  usage: null,
+  score: 0
 };
 
 @Component({
@@ -138,7 +143,14 @@ export class Home implements OnInit {
 
   // Método para salvar as informações do cliente
   saveClientInfos() {
-    this.clientService.saveClient(this.client); // Salva os dados do cliente através do service
+    this.clientService.saveClient({
+      ...this.client,
+      medication: this.selectedMedication.name,
+    }); // Salva os dados do cliente através do service
+  }
+
+  dateLabel() {
+    return formatDateUtil(this.client.requestDate);
   }
   /** ---------- Client ----------- */
 

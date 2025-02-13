@@ -2,11 +2,17 @@ import { Injectable } from "@angular/core";
 import { BehaviorSubject } from "rxjs";
 import { ClientRequest } from "src/types/client-type";
 import { Medication } from "src/types/medication-type";
-import { formatDateUtil } from "src/utils/format-date-util";
+import { isAfter, isBefore } from "date-fns";
+
+export enum PriorityLevel {
+  Low = "low",
+  Medium = "medium",
+  High = "high",
+}
 
 @Injectable({ providedIn: "root" })
 export class ClientService {
-  private hiddenValue = {
+  private hiddenValue: ClientRequest = {
     id: "",
     name: "",
     email: "",
@@ -14,6 +20,9 @@ export class ClientService {
     medication: "",
     phoneNumber: "",
     requestDate: null,
+    clinicalEmergency: false,
+    usage: null,
+    score: 0,
   };
 
   private clientSubject = new BehaviorSubject<Medication[]>(
@@ -25,9 +34,51 @@ export class ClientService {
     return this.hiddenValue;
   }
 
+  private getPriorityLevel(score: number): PriorityLevel {
+    if (score >= 5) return PriorityLevel.High;
+    if (score === 3) return PriorityLevel.Medium;
+    return PriorityLevel.Low;
+  }
+
   loadDataFromStorage(): Medication[] | [] {
     const tmpClients = localStorage.getItem("medications");
     return tmpClients ? JSON.parse(tmpClients) : [];
+  }
+
+  reshuffleList(
+    prevWaitingList: ClientRequest[],
+    entireClientRequest: ClientRequest
+  ) {
+    let [leftEdgeIndex, rightEdgeIndex] = [0, prevWaitingList.length - 1];
+    let [prevMidItem, nxtMidItem] = [null, null];
+
+    while (leftEdgeIndex <= rightEdgeIndex) {
+      let mid = Math.floor((leftEdgeIndex + rightEdgeIndex) / 2);
+      const midItem = prevWaitingList[mid];
+
+      if (
+        isAfter(entireClientRequest.requestDate, midItem.requestDate) ||
+        entireClientRequest.score < midItem.score
+      ) {
+        leftEdgeIndex = mid + 1;
+        prevMidItem = midItem;
+      } else if (
+        isBefore(entireClientRequest.requestDate, midItem.requestDate) ||
+        entireClientRequest.score > midItem.score
+      ) {
+        rightEdgeIndex = mid - 1;
+        nxtMidItem = midItem;
+      }
+    }
+
+    let position = prevWaitingList.findIndex((client) => client === nxtMidItem);
+    prevWaitingList.splice(
+      position === -1 ? prevWaitingList.length : position,
+      0,
+      entireClientRequest
+    );
+
+    return prevWaitingList.reverse();
   }
 
   saveClient(client: ClientRequest) {
@@ -36,10 +87,8 @@ export class ClientService {
     const emailRegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     const requestInfosCondition = client.medication && client.priority;
-
     const personalInfosCondition =
       client.email && client.email && client.phoneNumber;
-
     const validateWithRegExpConditions =
       phoneNumberRegExp.test(client.phoneNumber) &&
       emailRegExp.test(client.email);
@@ -49,7 +98,6 @@ export class ClientService {
       requestInfosCondition &&
       validateWithRegExpConditions
     ) {
-      client.requestDate = formatDateUtil(new Date());
       let tmp = localStorage.getItem("clients");
 
       if (tmp) {
@@ -83,10 +131,22 @@ export class ClientService {
         const selectedMedication =
           prevMedications[prevMedicationWaitingListInIndexLocalStorage];
 
+        let score: number = 0;
+        if (client.clinicalEmergency) score += 5;
+        if (client.usage === "continuous") score += 3;
+        const scoreLabel = this.getPriorityLevel(score);
+        client = { ...client, score, priority: scoreLabel };
+
         if (selectedMedication.waitingList) {
+          const reshuffledWaitingList = this.reshuffleList(
+            prevMedications[prevMedicationWaitingListInIndexLocalStorage]
+              .waitingList,
+            client
+          );
+
           prevMedications[
             prevMedicationWaitingListInIndexLocalStorage
-          ].waitingList.push(client);
+          ].waitingList = reshuffledWaitingList;
         } else {
           prevMedications[
             prevMedicationWaitingListInIndexLocalStorage

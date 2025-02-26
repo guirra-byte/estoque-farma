@@ -1,14 +1,16 @@
-import { PriorityLevel } from "@service/client/client-service";
+import { PriorityLevel } from "@service/client/client.service";
 
 export interface ClientRequest {
   id: string;
+  cpf: string;
   name: string;
   email: string;
-  requestDate: Date;
-  phoneNumber: string;
-  medication: string;
+  score: number;
   usage: "continuous" | "occasional";
-  clinicalEmergency: boolean;
+  whatsapp: string;
+  medication: string;
+  requestDate: Date;
+  dateLabel: string
   priority: PriorityLevel;
-  score: number
+  clinicalEmergency: boolean;
 }

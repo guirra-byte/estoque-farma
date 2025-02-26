@@ -14,12 +14,14 @@ export enum PriorityLevel {
 export class ClientService {
   private hiddenValue: ClientRequest = {
     id: "",
+    cpf: "",
+    whatsapp: "",
     name: "",
     email: "",
     priority: null,
     medication: "",
-    phoneNumber: "",
     requestDate: null,
+    dateLabel: "",
     clinicalEmergency: false,
     usage: null,
     score: 0,
@@ -82,16 +84,15 @@ export class ClientService {
   }
 
   saveClient(client: ClientRequest) {
-    const phoneNumberRegExp =
+    const whatsappRegExp =
       /^\+?\d{0,3}?\s?(\(?\d{2,4}\)?)?\s?\d{4,5}[-.\s]?\d{4}$/;
     const emailRegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-    const requestInfosCondition = client.medication && client.priority;
+    const requestInfosCondition = client.medication && client.usage;
     const personalInfosCondition =
-      client.email && client.email && client.phoneNumber;
+      client.name && client.email && client.whatsapp && client.cpf;
     const validateWithRegExpConditions =
-      phoneNumberRegExp.test(client.phoneNumber) &&
-      emailRegExp.test(client.email);
+      whatsappRegExp.test(client.whatsapp) && emailRegExp.test(client.email);
 
     if (
       personalInfosCondition &&
@@ -103,9 +104,9 @@ export class ClientService {
       if (tmp) {
         let prevClients = JSON.parse(tmp) as ClientRequest[];
         const clientAlreadyNoted = prevClients.find(
-          (client) =>
-            client.email === client.email ||
-            client.phoneNumber === client.phoneNumber
+          (_client) =>
+            _client.email === client.email ||
+            _client.whatsapp === client.whatsapp
         );
 
         if (!clientAlreadyNoted) {
@@ -138,15 +139,15 @@ export class ClientService {
         client = { ...client, score, priority: scoreLabel };
 
         if (selectedMedication.waitingList) {
-          const reshuffledWaitingList = this.reshuffleList(
-            prevMedications[prevMedicationWaitingListInIndexLocalStorage]
-              .waitingList,
-            client
-          );
+          // const reshuffledWaitingList = this.reshuffleList(
+          //   prevMedications[prevMedicationWaitingListInIndexLocalStorage]
+          //     .waitingList,
+          //   client
+          // );
 
           prevMedications[
             prevMedicationWaitingListInIndexLocalStorage
-          ].waitingList = reshuffledWaitingList;
+          ].waitingList.push(client);
         } else {
           prevMedications[
             prevMedicationWaitingListInIndexLocalStorage

@@ -1,32 +1,46 @@
 import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
 import { ImportsModule } from "./imports";
 import { MenuItem } from "primeng/api";
-import { MedicationService } from "../service/medication/medication-service";
-import { Medication } from "src/types/medication-type";
-import { ClientService } from "@service/client/client-service";
+import { MedicationService } from "../service/medication/medication.service";
+import { EditedMedication, Medication } from "src/types/medication-type";
+import { ClientService } from "@service/client/client.service";
 import { ClientRequest } from "src/types/client-type";
 import { formatDateUtil } from "src/utils/format-date-util";
+import {
+  WhatsappMessage,
+  WhatsappMessageTrigger,
+} from "src/types/notification-type";
+import { MessageService } from "@service/message/message.service";
 
 const hiddenMedicationValue = {
   id: "",
   name: "",
   price: 0,
   status: null,
-  waitingList: null,
+  waitingList: [],
   quantityInStock: 0,
 };
 
 const hiddenClientValue: ClientRequest = {
   id: "",
+  cpf: "",
+  whatsapp: "",
   name: "",
   email: "",
   priority: null,
   medication: "",
-  phoneNumber: "",
   requestDate: null,
+  dateLabel: "",
   clinicalEmergency: false,
   usage: null,
-  score: 0
+  score: 0,
+};
+
+const hiddenEditMedicationValue: EditedMedication = {
+  name: "",
+  price: 0,
+  status: null,
+  quantityInStock: 0,
 };
 
 @Component({
@@ -37,24 +51,10 @@ const hiddenClientValue: ClientRequest = {
   providers: [],
 })
 export class Home implements OnInit {
-  menubarItems: MenuItem[] = [
-    {
-      label: "Meu Estoque",
-      icon: "pi pi-home",
-    },
-    {
-      label: "Notificações",
-      icon: "pi pi-whatsapp",
-    },
-    {
-      label: "Suporte",
-      icon: "pi pi-envelope",
-    },
-  ];
-
   constructor(
     private clientService: ClientService,
     private medicationService: MedicationService,
+    private messageService: MessageService,
     private cd: ChangeDetectorRef
   ) {}
 
@@ -62,13 +62,36 @@ export class Home implements OnInit {
   // Lista de medicamentos e suas seleções;
   medications: Medication[] = [];
   medicationsSelect: string[] = [];
+
   selectedMedication: Medication | null = null;
+  editedMedicationTmp: EditedMedication = hiddenEditMedicationValue;
 
   // Dados do medicamento atual;
   medication: Medication = hiddenMedicationValue;
 
   // Controle de visibilidade do diálogo do medicamento;
+  editMedicationDialogVisible: boolean = false;
   medicationDialogVisible: boolean = false;
+
+  // Abrir ou fechar o diálogo de edição de medicamentos;
+  handleEditMedicationDialog() {
+    this.editMedicationDialogVisible = !this.editMedicationDialogVisible;
+  }
+
+  clearEditMedicationDialog() {
+    this.handleEditMedicationDialog();
+    this.editedMedicationTmp = hiddenEditMedicationValue;
+    this.cd.detectChanges();
+  }
+
+  async editMedicationInfos() {
+    await this.medicationService
+      .editMedication(this.selectedMedication, this.editedMedicationTmp)
+      .then(() => {
+        this.medications = this.medicationService.loadDataFromStorage();
+        this.clearEditMedicationDialog();
+      });
+  }
 
   // Abrir ou fechar o diálogo de medicamentos;
   handleMedicationDialog() {
@@ -119,6 +142,11 @@ export class Home implements OnInit {
     this.selectedMedication = medication;
     this.handleClientLargeDialog();
   }
+
+  openEditMedicationDialog(medication: Medication) {
+    this.selectedMedication = medication;
+    this.handleEditMedicationDialog();
+  }
   // Client Dialog States
   client: ClientRequest = hiddenClientValue; // Propriedade para armazenar os dados do cliente
   clientDialogVisible: boolean = false; // Estado do modal de client
@@ -143,14 +171,70 @@ export class Home implements OnInit {
 
   // Método para salvar as informações do cliente
   saveClientInfos() {
+    const requestDate = new Date();
     this.clientService.saveClient({
       ...this.client,
+      requestDate,
+      dateLabel: formatDateUtil(requestDate),
       medication: this.selectedMedication.name,
-    }); // Salva os dados do cliente através do service
+    });
+    // Salva os dados do cliente através do service
+
+    this.clearClient();
   }
 
-  dateLabel() {
-    return formatDateUtil(this.client.requestDate);
+  whatsappMessages: WhatsappMessage[] = [];
+  triggersOptions: { event: WhatsappMessageTrigger; label: string }[] = [
+    {
+      event: WhatsappMessageTrigger.Med_Available,
+      label: "Disponível Novamente",
+    },
+    {
+      event: WhatsappMessageTrigger.Ready_For_Pickup,
+      label: "Pronto para Retirada",
+    },
+    {
+      event: WhatsappMessageTrigger.New_Batch_Soon,
+      label: "Nova Remessa em Breve",
+    },
+  ];
+
+  whatsappMessage: WhatsappMessage = {
+    tag: "",
+    editorBody: "",
+    trigger: { event: null, label: "" },
+  };
+
+  messageEditorVisible: boolean = false;
+  handleMessageEditorDialog() {
+    this.messageEditorVisible = !this.messageEditorVisible;
+  }
+
+  saveMessageEditorInfos() {
+    const getTriggerEvent = this.triggersOptions.find(
+      (trigger) => trigger.label === this.whatsappMessage.trigger.label
+    );
+
+    this.messageService.saveMessageEditor({
+      ...this.whatsappMessage,
+      trigger: getTriggerEvent,
+    });
+
+    this.clearMessageEditorDialog();
+  }
+
+  clearMessageEditorDialog() {
+    this.handleMessageEditorDialog();
+    this.whatsappMessage = {
+      tag: "",
+      editorBody: "",
+      trigger: { event: null, label: "" },
+    };
+    this.cd.detectChanges();
+  }
+
+  handleClinicalEmergencyStatus() {
+    this.client.clinicalEmergency = !this.client.clinicalEmergency;
   }
   /** ---------- Client ----------- */
 
@@ -162,6 +246,10 @@ export class Home implements OnInit {
       );
     });
 
+    this.messageService.messages$.subscribe((messages) => {
+      this.whatsappMessages = messages;
+    });
+
     this.clientService.clients$.subscribe((medications) => {
       this.medications = medications;
     });
@@ -169,19 +257,19 @@ export class Home implements OnInit {
     this.cd.detectChanges();
   }
 
-  overviewMeterGroup = [
-    { label: "Em Estoque", color: "#34d399", value: 16, icon: "pi pi-table" },
-    {
-      label: "Reposição em Breve",
-      color: "#fbbf24",
-      value: 30,
-      icon: "pi pi-inbox",
-    },
-    {
-      label: "Fora de Estoque",
-      color: "#f43f5e",
-      value: 24,
-      icon: "pi pi-cart-minus",
-    },
-  ];
+  // overviewMeterGroup = [
+  //   { label: "Em Estoque", color: "#34d399", value: 16, icon: "pi pi-table" },
+  //   {
+  //     label: "Reposição em Breve",
+  //     color: "#fbbf24",
+  //     value: 30,
+  //     icon: "pi pi-inbox",
+  //   },
+  //   {
+  //     label: "Fora de Estoque",
+  //     color: "#f43f5e",
+  //     value: 24,
+  //     icon: "pi pi-cart-minus",
+  //   },
+  // ];
 }
